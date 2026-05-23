@@ -9,7 +9,7 @@ Built using LangGraph, Groq, Tavily, MongoDB Atlas, FAISS, and Streamlit.
 # Live Demo
 
 🚀 Deployed Application:  
-https://YOUR-STREAMLIT-APP.streamlit.app
+https://ma-research-assistant.streamlit.app/
 
 ---
 
