@@ -1,5 +1,6 @@
 from utils.llm import llm
 
+
 def writer_agent(state):
 
     query = state["query"]
@@ -9,26 +10,34 @@ def writer_agent(state):
     critique = state["critique"]
 
     prompt = f"""
-You are a professional AI research report writer.
+You are a professional research report writer.
 
-Write a WELL-FORMATTED markdown research report.
+Create a WELL-FORMATTED markdown research report.
 
 IMPORTANT FORMATTING RULES:
+- Use proper markdown headings
+- Use bullet points
+- Use numbered lists where needed
+- Leave proper spacing between sections
+- NEVER write everything in one paragraph
+- NEVER include raw markdown symbols like **
+- Keep paragraphs short and readable
 
-- Use proper markdown headings:
-# Title
+FORMAT:
+
+# Final Research Report
+
 ## Introduction
-## Key Findings
-## Challenges
-## Future Directions
-## Conclusion
-## Recommendations
 
-- Use bullet points where needed.
-- Use short readable paragraphs.
-- Add spacing between sections.
-- Do NOT write everything in one paragraph.
-- Make the report visually clean and professional.
+## Key Findings
+
+## Critical Analysis
+
+## Challenges
+
+## Future Directions
+
+## Conclusion
 
 Research Query:
 {query}
@@ -36,10 +45,8 @@ Research Query:
 Research Findings:
 {search_results}
 
-Critique:
+Critic Feedback:
 {critique}
-
-Generate the final report now.
 """
 
     response = llm.invoke(prompt)

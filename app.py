@@ -257,7 +257,7 @@ if st.session_state.chat_query:
                 f"Research Result {idx + 1}"
             ):
 
-                st.write(result_text)
+                st.markdown(result_text)
 
     # ==========================================
     # CRITIC ANALYSIS
@@ -279,14 +279,17 @@ if st.session_state.chat_query:
 
         st.subheader("Final Research Report")
 
-        st.markdown(
+        clean_saved_report = (
             st.session_state.chat_report
+            .replace("**", "")
         )
+
+        st.markdown(clean_saved_report)
 
         pdf_filename = "research_report.pdf"
 
         create_pdf(
-            st.session_state.chat_report,
+            clean_saved_report,
             pdf_filename
         )
 
@@ -343,12 +346,34 @@ if run_button:
     try:
 
         # ==========================================
+        # CONTEXT MEMORY
+        # ==========================================
+
+        full_query = query
+
+        if st.session_state.chat_report:
+
+            full_query = f"""
+Previous Research Report:
+
+{st.session_state.chat_report}
+
+Previous Critic Analysis:
+
+{st.session_state.chat_critique}
+
+New User Request:
+
+{query}
+"""
+
+        # ==========================================
         # INITIAL STATE
         # ==========================================
 
         initial_state = {
 
-            "query": query,
+            "query": full_query,
 
             "subquestions": [],
 
@@ -414,7 +439,7 @@ if run_button:
                 f"Research Result {idx + 1}"
             ):
 
-                st.write(result_text)
+                st.markdown(result_text)
 
         # ==========================================
         # CRITIC ANALYSIS
@@ -434,6 +459,11 @@ if run_button:
             "final_report"
         ]
 
+        clean_report = (
+            final_report
+            .replace("**", "")
+        )
+
         st.subheader(
             "Final Research Report"
         )
@@ -442,16 +472,15 @@ if run_button:
 
         streamed_text = ""
 
-        for word in final_report.split():
+        for line in clean_report.split("\n"):
 
-            streamed_text += word + " "
+            streamed_text += line + "\n"
 
             report_placeholder.markdown(
-                streamed_text,
-                unsafe_allow_html=True
+                streamed_text
             )
 
-            time.sleep(0.01)
+            time.sleep(0.03)
 
         # ==========================================
         # SAVE SESSION STATE
@@ -459,7 +488,7 @@ if run_button:
 
         st.session_state.chat_query = query
 
-        st.session_state.chat_report = final_report
+        st.session_state.chat_report = clean_report
 
         st.session_state.chat_subquestions = result[
             "subquestions"
@@ -480,7 +509,7 @@ if run_button:
         pdf_filename = "research_report.pdf"
 
         create_pdf(
-            final_report,
+            clean_report,
             pdf_filename
         )
 
@@ -504,7 +533,7 @@ if run_button:
 
             query=query,
 
-            report=final_report,
+            report=clean_report,
 
             subquestions=result["subquestions"],
 

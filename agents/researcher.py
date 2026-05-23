@@ -1,28 +1,46 @@
 from utils.search import search_web
+from utils.llm import llm
 
 
 def researcher_agent(state):
 
     subquestions = state["subquestions"]
 
-    all_results = []
+    findings = []
 
     for question in subquestions:
 
-        results = search_web(question)
+        web_results = search_web(question)
 
-        combined = "\n".join(results)
+        summarized_results = []
 
-        all_results.append(
+        for result in web_results:
+
+            summary_prompt = f"""
+Summarize this research result clearly.
+
+Keep it concise and readable.
+
+Content:
+{result}
+"""
+
+            summary = llm.invoke(
+                summary_prompt
+            ).content
+
+            summarized_results.append(summary)
+
+        findings.append(
             f"""
-Research Question:
+### Research Question
 {question}
 
-Findings:
-{combined}
+### Findings
+{" ".join(summarized_results)}
 """
         )
 
-    return {
-        "search_results": all_results
-    }
+    state["search_results"] = findings
+
+    return state
