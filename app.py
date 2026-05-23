@@ -356,7 +356,7 @@ if run_button:
             full_query = f"""
 Previous Research Report:
 
-{st.session_state.chat_report}
+{st.session_state.chat_report[:3000]}
 
 Previous Critic Analysis:
 
