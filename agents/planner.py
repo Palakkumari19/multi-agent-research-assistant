@@ -6,22 +6,38 @@ def planner_agent(state):
     query = state["query"]
 
     prompt = f"""
-    Break this research query into 3 focused subquestions.
+You are an expert research planning agent.
 
-    Query:
-    {query}
+Break the research request into 3-5 focused research questions.
 
-    Return only bullet points.
-    """
+RULES:
+- Keep questions specific
+- Avoid vague wording
+- Cover technical, practical, and future aspects
+- Output ONLY bullet points
+
+Research Request:
+{query}
+"""
 
     response = llm.invoke(prompt)
 
-    subquestions = [
-        line.replace("-", "").strip()
-        for line in response.content.split("\n")
-        if line.strip()
-    ]
+    lines = response.content.split("\n")
 
-    return {
-        "subquestions": subquestions
-    }
+    questions = []
+
+    for line in lines:
+
+        cleaned = (
+            line.replace("-", "")
+            .replace("*", "")
+            .strip()
+        )
+
+        if cleaned:
+
+            questions.append(cleaned)
+
+    state["subquestions"] = questions
+
+    return state

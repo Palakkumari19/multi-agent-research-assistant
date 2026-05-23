@@ -12,32 +12,39 @@ def researcher_agent(state):
 
         web_results = search_web(question)
 
-        summarized_results = []
+        combined = "\n".join(web_results[:2])
 
-        for result in web_results:
+        summary_prompt = f"""
+You are a research summarization agent.
 
-            summary_prompt = f"""
-Summarize this research result clearly.
+Summarize the findings clearly.
 
-Keep it concise and readable.
+FORMAT:
+- Key Insights
+- Important Technologies
+- Applications
+- Challenges
 
-Content:
-{result}
+Keep response readable and concise.
+
+Research Question:
+{question}
+
+Search Results:
+{combined}
 """
 
-            summary = llm.invoke(
-                summary_prompt
-            ).content
-
-            summarized_results.append(summary)
+        summary = llm.invoke(
+            summary_prompt
+        ).content
 
         findings.append(
             f"""
-### Research Question
+## Research Question
 {question}
 
-### Findings
-{" ".join(summarized_results)}
+## Findings
+{summary}
 """
         )
 

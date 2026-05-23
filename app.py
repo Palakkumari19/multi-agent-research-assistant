@@ -22,7 +22,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# CLEAN MINIMAL UI
+# CLEAN UI
 # ==========================================
 
 st.markdown(
@@ -99,7 +99,7 @@ st.markdown(
 st.title("Multi-Agent Research Assistant")
 
 st.caption(
-    "AI-powered autonomous research workflow using LangGraph, Groq, Tavily and MongoDB."
+    "Persistent autonomous research workflow using LangGraph, Groq, Tavily and MongoDB."
 )
 
 st.divider()
@@ -112,15 +112,9 @@ default_states = {
 
     "active_chat": None,
 
-    "chat_query": "",
+    "conversation_history": [],
 
-    "chat_report": "",
-
-    "chat_subquestions": [],
-
-    "chat_results": [],
-
-    "chat_critique": ""
+    "current_query": ""
 
 }
 
@@ -146,7 +140,9 @@ if st.sidebar.button("New Chat"):
 
     st.rerun()
 
+# ==========================================
 # LOAD HISTORY
+# ==========================================
 
 try:
 
@@ -169,29 +165,9 @@ try:
 
             st.session_state.active_chat = research_id
 
-            st.session_state.chat_query = item.get(
-                "query",
-                ""
-            )
-
-            st.session_state.chat_report = item.get(
-                "report",
-                ""
-            )
-
-            st.session_state.chat_subquestions = item.get(
-                "subquestions",
+            st.session_state.conversation_history = item.get(
+                "conversation_history",
                 []
-            )
-
-            st.session_state.chat_results = item.get(
-                "search_results",
-                []
-            )
-
-            st.session_state.chat_critique = item.get(
-                "critique",
-                ""
             )
 
             st.rerun()
@@ -214,98 +190,160 @@ except Exception as e:
     )
 
 # ==========================================
-# DISPLAY SAVED CHAT
+# DISPLAY CONVERSATION
 # ==========================================
 
-if st.session_state.chat_query:
+if st.session_state.conversation_history:
 
-    st.subheader("Current Session")
+    st.subheader("Research Conversation")
 
-    st.markdown(
-        f"## {st.session_state.chat_query}"
-    )
+    for idx, interaction in enumerate(
 
-    # ==========================================
-    # RESEARCH PLAN
-    # ==========================================
+        st.session_state.conversation_history
 
-    if st.session_state.chat_subquestions:
+    ):
 
-        st.subheader("Research Plan")
-
-        for idx, question in enumerate(
-            st.session_state.chat_subquestions
-        ):
-
-            st.markdown(
-                f"{idx + 1}. {question}"
-            )
-
-    # ==========================================
-    # RESEARCH FINDINGS
-    # ==========================================
-
-    if st.session_state.chat_results:
-
-        st.subheader("Research Findings")
-
-        for idx, result_text in enumerate(
-            st.session_state.chat_results
-        ):
-
-            with st.expander(
-                f"Research Result {idx + 1}"
-            ):
-
-                st.markdown(result_text)
-
-    # ==========================================
-    # CRITIC ANALYSIS
-    # ==========================================
-
-    if st.session_state.chat_critique:
-
-        st.subheader("Critic Analysis")
+        st.markdown(
+            f"## User Request {idx + 1}"
+        )
 
         st.info(
-            st.session_state.chat_critique
+            interaction["query"]
         )
 
-    # ==========================================
-    # FINAL REPORT
-    # ==========================================
+        # ==========================================
+        # IMPROVEMENTS
+        # ==========================================
 
-    if st.session_state.chat_report:
+        if interaction.get(
+            "improvement_summary"
+        ):
 
-        st.subheader("Final Research Report")
-
-        clean_saved_report = (
-            st.session_state.chat_report
-            .replace("**", "")
-        )
-
-        st.markdown(clean_saved_report)
-
-        pdf_filename = "research_report.pdf"
-
-        create_pdf(
-            clean_saved_report,
-            pdf_filename
-        )
-
-        with open(
-            pdf_filename,
-            "rb"
-        ) as pdf_file:
-
-            st.download_button(
-                label="Download PDF Report",
-                data=pdf_file,
-                file_name=pdf_filename,
-                mime="application/pdf"
+            st.subheader(
+                "Improvements Added"
             )
 
-    st.divider()
+            st.success(
+                interaction[
+                    "improvement_summary"
+                ]
+            )
+
+        # ==========================================
+        # RESEARCH PLAN
+        # ==========================================
+
+        if interaction.get(
+            "subquestions"
+        ):
+
+            st.subheader(
+                "Research Plan"
+            )
+
+            for i, question in enumerate(
+
+                interaction["subquestions"]
+
+            ):
+
+                st.markdown(
+                    f"{i + 1}. {question}"
+                )
+
+        # ==========================================
+        # FINDINGS
+        # ==========================================
+
+        if interaction.get(
+            "search_results"
+        ):
+
+            st.subheader(
+                "Research Findings"
+            )
+
+            for i, result_text in enumerate(
+
+                interaction["search_results"]
+
+            ):
+
+                with st.expander(
+                    f"Finding {i + 1}"
+                ):
+
+                    st.markdown(
+                        result_text
+                    )
+
+        # ==========================================
+        # CRITIC
+        # ==========================================
+
+        if interaction.get(
+            "critique"
+        ):
+
+            st.subheader(
+                "Critic Analysis"
+            )
+
+            st.warning(
+                interaction["critique"]
+            )
+
+        # ==========================================
+        # FINAL REPORT
+        # ==========================================
+
+        if interaction.get(
+            "final_report"
+        ):
+
+            st.subheader(
+                "Final Research Report"
+            )
+
+            st.markdown(
+                interaction[
+                    "final_report"
+                ]
+            )
+
+            pdf_filename = (
+                f"research_report_{idx}.pdf"
+            )
+
+            create_pdf(
+
+                interaction["final_report"],
+
+                pdf_filename
+
+            )
+
+            with open(
+                pdf_filename,
+                "rb"
+            ) as pdf_file:
+
+                st.download_button(
+
+                    label=(
+                        f"Download PDF "
+                        f"{idx + 1}"
+                    ),
+
+                    data=pdf_file,
+
+                    file_name=pdf_filename,
+
+                    mime="application/pdf"
+
+                )
+
+        st.divider()
 
 # ==========================================
 # USER INPUT
@@ -314,7 +352,11 @@ if st.session_state.chat_query:
 query = st.text_area(
     "Enter your research query:",
     height=150,
-    placeholder="Example: Summarize recent AI research on RAG systems"
+    placeholder=(
+        "Example: "
+        "Summarize recent AI "
+        "research on RAG systems"
+    )
 )
 
 run_button = st.button(
@@ -322,10 +364,8 @@ run_button = st.button(
 )
 
 # ==========================================
-# EXECUTION TIMELINE
+# EXECUTION STATUS
 # ==========================================
-
-st.subheader("Execution Timeline")
 
 timeline_container = st.container()
 
@@ -346,21 +386,33 @@ if run_button:
     try:
 
         # ==========================================
-        # CONTEXT MEMORY
+        # BUILD CONTEXT
         # ==========================================
 
-        full_query = query
+        previous_context = ""
 
-        if st.session_state.chat_report:
+        if st.session_state.conversation_history:
 
-            full_query = f"""
+            last_interaction = (
+
+                st.session_state
+                .conversation_history[-1]
+
+            )
+
+            previous_context = f"""
+
 Previous Research Report:
 
-{st.session_state.chat_report[:3000]}
+{last_interaction.get('final_report', '')}
 
 Previous Critic Analysis:
 
-{st.session_state.chat_critique}
+{last_interaction.get('critique', '')}
+"""
+
+        full_query = f"""
+{previous_context}
 
 New User Request:
 
@@ -381,7 +433,14 @@ New User Request:
 
             "critique": "",
 
-            "final_report": ""
+            "final_report": "",
+
+            "improvement_summary": "",
+
+            "conversation_history": (
+                st.session_state
+                .conversation_history
+            )
 
         }
 
@@ -391,81 +450,40 @@ New User Request:
 
         with timeline_container:
 
-            st.success(
+            st.info(
                 "Planner Agent Running..."
             )
 
-        result = app.invoke(initial_state)
+        result = app.invoke(
+            initial_state
+        )
 
         with timeline_container:
 
             st.success(
-                "Researcher Agent Completed"
-            )
-
-            st.success(
-                "Critic Agent Completed"
-            )
-
-            st.success(
-                "Writer Agent Completed"
+                "Research Workflow Completed"
             )
 
         # ==========================================
-        # RESEARCH PLAN
+        # CLEAN REPORT
         # ==========================================
-
-        st.subheader("Research Plan")
-
-        for idx, question in enumerate(
-            result["subquestions"]
-        ):
-
-            st.markdown(
-                f"{idx + 1}. {question}"
-            )
-
-        # ==========================================
-        # RESEARCH FINDINGS
-        # ==========================================
-
-        st.subheader("Research Findings")
-
-        for idx, result_text in enumerate(
-            result["search_results"]
-        ):
-
-            with st.expander(
-                f"Research Result {idx + 1}"
-            ):
-
-                st.markdown(result_text)
-
-        # ==========================================
-        # CRITIC ANALYSIS
-        # ==========================================
-
-        st.subheader("Critic Analysis")
-
-        st.info(
-            result["critique"]
-        )
-
-        # ==========================================
-        # FINAL REPORT
-        # ==========================================
-
-        final_report = result[
-            "final_report"
-        ]
 
         clean_report = (
-            final_report
+
+            result["final_report"]
+
             .replace("**", "")
+
+            .replace("###", "##")
+
         )
 
+        # ==========================================
+        # STREAM REPORT
+        # ==========================================
+
         st.subheader(
-            "Final Research Report"
+            "Generating Final Report"
         )
 
         report_placeholder = st.empty()
@@ -480,50 +498,48 @@ New User Request:
                 streamed_text
             )
 
-            time.sleep(0.03)
+            time.sleep(0.02)
 
         # ==========================================
-        # SAVE SESSION STATE
+        # SAVE INTERACTION
         # ==========================================
 
-        st.session_state.chat_query = query
+        interaction = {
 
-        st.session_state.chat_report = clean_report
+            "query": query,
 
-        st.session_state.chat_subquestions = result[
-            "subquestions"
-        ]
+            "subquestions": (
+                result["subquestions"]
+            ),
 
-        st.session_state.chat_results = result[
-            "search_results"
-        ]
+            "search_results": (
+                result["search_results"]
+            ),
 
-        st.session_state.chat_critique = result[
-            "critique"
-        ]
+            "critique": (
+                result["critique"]
+            ),
+
+            "improvement_summary": (
+                result.get(
+                    "improvement_summary",
+                    ""
+                )
+            ),
+
+            "final_report": clean_report
+
+        }
 
         # ==========================================
-        # PDF DOWNLOAD
+        # APPEND HISTORY
         # ==========================================
 
-        pdf_filename = "research_report.pdf"
+        st.session_state.conversation_history.append(
 
-        create_pdf(
-            clean_report,
-            pdf_filename
+            interaction
+
         )
-
-        with open(
-            pdf_filename,
-            "rb"
-        ) as pdf_file:
-
-            st.download_button(
-                label="Download PDF Report",
-                data=pdf_file,
-                file_name=pdf_filename,
-                mime="application/pdf"
-            )
 
         # ==========================================
         # SAVE TO MONGODB
@@ -535,12 +551,22 @@ New User Request:
 
             report=clean_report,
 
-            subquestions=result["subquestions"],
+            subquestions=result[
+                "subquestions"
+            ],
 
-            search_results=result["search_results"],
+            search_results=result[
+                "search_results"
+            ],
 
-            critique=result["critique"]
+            critique=result[
+                "critique"
+            ]
 
+        )
+
+        st.success(
+            "Research saved successfully."
         )
 
     except Exception as e:
