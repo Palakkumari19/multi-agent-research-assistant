@@ -451,6 +451,8 @@ if run_button:
             final_report
         )
 
+        st.rerun()
+
         st.divider()
 
     except Exception as e:
