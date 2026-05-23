@@ -22,75 +22,49 @@ st.set_page_config(
 )
 
 # ==========================================
-# CLEAN UI
+# STYLING
 # ==========================================
 
-st.markdown(
-    """
-    <style>
+st.markdown("""
+<style>
 
-    .main {
-        background-color: #0E1117;
-        color: white;
-    }
+.main {
+    background-color: #0E1117;
+    color: white;
+}
 
-    section[data-testid="stSidebar"] {
-        background-color: #111827;
-        border-right: 1px solid #1F2937;
-    }
+section[data-testid="stSidebar"] {
+    background-color: #111827;
+}
 
-    .stTextArea textarea {
+.stTextArea textarea {
 
-        background-color: #161B22 !important;
+    background-color: #161B22 !important;
 
-        color: white !important;
+    color: white !important;
 
-        border: 1px solid #2A2F3A !important;
+    border-radius: 10px !important;
 
-        border-radius: 10px !important;
+    border: 1px solid #2A2F3A !important;
+}
 
-        font-size: 16px !important;
-    }
+.report-box {
 
-    .stButton button {
+    background-color: #161B22;
 
-        background-color: #1F2937 !important;
+    padding: 25px;
 
-        color: white !important;
+    border-radius: 12px;
 
-        border: 1px solid #374151 !important;
+    border: 1px solid #1F2937;
 
-        border-radius: 8px !important;
+    margin-top: 20px;
 
-        padding: 0.5rem 1rem !important;
+    margin-bottom: 20px;
+}
 
-        font-weight: 500 !important;
-    }
-
-    .stButton button:hover {
-
-        background-color: #273244 !important;
-    }
-
-    .stDownloadButton button {
-
-        background-color: #1F2937 !important;
-
-        color: white !important;
-
-        border: 1px solid #374151 !important;
-
-        border-radius: 8px !important;
-    }
-
-    hr {
-        border-color: #1F2937;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+</style>
+""", unsafe_allow_html=True)
 
 # ==========================================
 # TITLE
@@ -108,21 +82,11 @@ st.divider()
 # SESSION STATE
 # ==========================================
 
-default_states = {
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
 
-    "active_chat": None,
-
-    "conversation_history": [],
-
-    "current_query": ""
-
-}
-
-for key, value in default_states.items():
-
-    if key not in st.session_state:
-
-        st.session_state[key] = value
+if "active_chat" not in st.session_state:
+    st.session_state.active_chat = None
 
 # ==========================================
 # SIDEBAR
@@ -130,18 +94,20 @@ for key, value in default_states.items():
 
 st.sidebar.title("Research History")
 
+# ==========================================
 # NEW CHAT
+# ==========================================
 
 if st.sidebar.button("New Chat"):
 
-    for key, value in default_states.items():
+    st.session_state.conversation_history = []
 
-        st.session_state[key] = value
+    st.session_state.active_chat = None
 
     st.rerun()
 
 # ==========================================
-# LOAD HISTORY
+# HISTORY
 # ==========================================
 
 try:
@@ -154,7 +120,7 @@ try:
 
         research_id = str(item["_id"])
 
-        col1, col2 = st.sidebar.columns([4, 1])
+        col1, col2 = st.sidebar.columns([4,1])
 
         # VIEW CHAT
 
@@ -185,12 +151,10 @@ try:
 
 except Exception as e:
 
-    st.sidebar.error(
-        f"Could not load history: {e}"
-    )
+    st.sidebar.error(str(e))
 
 # ==========================================
-# DISPLAY CONVERSATION
+# DISPLAY CHAT HISTORY
 # ==========================================
 
 if st.session_state.conversation_history:
@@ -202,6 +166,10 @@ if st.session_state.conversation_history:
         st.session_state.conversation_history
 
     ):
+
+        # ==========================================
+        # USER PROMPT
+        # ==========================================
 
         st.markdown(
             f"## User Request {idx + 1}"
@@ -230,7 +198,7 @@ if st.session_state.conversation_history:
             )
 
         # ==========================================
-        # RESEARCH PLAN
+        # SUBQUESTIONS
         # ==========================================
 
         if interaction.get(
@@ -241,14 +209,12 @@ if st.session_state.conversation_history:
                 "Research Plan"
             )
 
-            for i, question in enumerate(
-
-                interaction["subquestions"]
-
-            ):
+            for q in interaction[
+                "subquestions"
+            ]:
 
                 st.markdown(
-                    f"{i + 1}. {question}"
+                    f"- {q}"
                 )
 
         # ==========================================
@@ -265,7 +231,9 @@ if st.session_state.conversation_history:
 
             for i, result_text in enumerate(
 
-                interaction["search_results"]
+                interaction[
+                    "search_results"
+                ]
 
             ):
 
@@ -297,77 +265,61 @@ if st.session_state.conversation_history:
         # FINAL REPORT
         # ==========================================
 
-        if interaction.get(
-            "final_report"
-        ):
+        st.subheader(
+            "Final Research Report"
+        )
 
-            st.subheader(
-                "Final Research Report"
+        st.markdown(
+            interaction["final_report"]
+        )
+
+        # ==========================================
+        # PDF
+        # ==========================================
+
+        pdf_filename = (
+            f"report_{idx}.pdf"
+        )
+
+        create_pdf(
+            interaction["final_report"],
+            pdf_filename
+        )
+
+        with open(
+            pdf_filename,
+            "rb"
+        ) as pdf_file:
+
+            st.download_button(
+
+                label=(
+                    f"Download PDF "
+                    f"{idx + 1}"
+                ),
+
+                data=pdf_file,
+
+                file_name=pdf_filename,
+
+                mime="application/pdf"
+
             )
-
-            st.markdown(
-                interaction[
-                    "final_report"
-                ]
-            )
-
-            pdf_filename = (
-                f"research_report_{idx}.pdf"
-            )
-
-            create_pdf(
-
-                interaction["final_report"],
-
-                pdf_filename
-
-            )
-
-            with open(
-                pdf_filename,
-                "rb"
-            ) as pdf_file:
-
-                st.download_button(
-
-                    label=(
-                        f"Download PDF "
-                        f"{idx + 1}"
-                    ),
-
-                    data=pdf_file,
-
-                    file_name=pdf_filename,
-
-                    mime="application/pdf"
-
-                )
 
         st.divider()
 
 # ==========================================
-# USER INPUT
+# INPUT
 # ==========================================
 
 query = st.text_area(
     "Enter your research query:",
-    height=150,
-    placeholder=(
-        "Example: "
-        "Summarize recent AI "
-        "research on RAG systems"
-    )
+    height=150
 )
 
 run_button = st.button(
     "Run Research"
 )
-
-# ==========================================
-# EXECUTION STATUS
-# ==========================================
-
-timeline_container = st.container()
 
 # ==========================================
 # MAIN WORKFLOW
@@ -378,22 +330,24 @@ if run_button:
     if not query.strip():
 
         st.warning(
-            "Please enter a research query."
+            "Please enter a query."
         )
 
         st.stop()
 
     try:
 
-        # ==========================================
-        # BUILD CONTEXT
-        # ==========================================
-
         previous_context = ""
+
+        improvement_summary = ""
+
+        # ==========================================
+        # CONTEXT MEMORY
+        # ==========================================
 
         if st.session_state.conversation_history:
 
-            last_interaction = (
+            last_chat = (
 
                 st.session_state
                 .conversation_history[-1]
@@ -402,26 +356,63 @@ if run_button:
 
             previous_context = f"""
 
-Previous Research Report:
+PREVIOUS REPORT:
 
-{last_interaction.get('final_report', '')}
+{last_chat["final_report"]}
 
-Previous Critic Analysis:
+PREVIOUS CRITIC ANALYSIS:
 
-{last_interaction.get('critique', '')}
+{last_chat["critique"]}
 """
 
+            improvement_summary = """
+This response improves the previous report by:
+- addressing critic feedback
+- refining missing concepts
+- increasing completeness
+- improving structure
+"""
+
+        # ==========================================
+        # PROMPT
+        # ==========================================
+
         full_query = f"""
+You are an advanced autonomous research assistant.
+
+Generate:
+
+1. Research subquestions
+2. Research findings
+3. Critic analysis
+4. Final structured report
+
+IMPORTANT:
+- Use markdown formatting
+- Use headings
+- Use bullet points
+- Keep spacing clean
+- Avoid giant paragraphs
+- Avoid raw markdown symbols like **
+
+CONTEXT:
+
 {previous_context}
 
-New User Request:
+USER REQUEST:
 
 {query}
 """
 
         # ==========================================
-        # INITIAL STATE
+        # STATUS
         # ==========================================
+
+        status = st.empty()
+
+        status.info(
+            "Planner Agent Running..."
+        )
 
         initial_state = {
 
@@ -433,36 +424,17 @@ New User Request:
 
             "critique": "",
 
-            "final_report": "",
-
-            "improvement_summary": "",
-
-            "conversation_history": (
-                st.session_state
-                .conversation_history
-            )
+            "final_report": ""
 
         }
-
-        # ==========================================
-        # EXECUTION STATUS
-        # ==========================================
-
-        with timeline_container:
-
-            st.info(
-                "Planner Agent Running..."
-            )
 
         result = app.invoke(
             initial_state
         )
 
-        with timeline_container:
-
-            st.success(
-                "Research Workflow Completed"
-            )
+        status.success(
+            "Research Workflow Completed"
+        )
 
         # ==========================================
         # CLEAN REPORT
@@ -474,34 +446,12 @@ New User Request:
 
             .replace("**", "")
 
-            .replace("###", "##")
+            .replace("```", "")
 
         )
 
         # ==========================================
-        # STREAM REPORT
-        # ==========================================
-
-        st.subheader(
-            "Generating Final Report"
-        )
-
-        report_placeholder = st.empty()
-
-        streamed_text = ""
-
-        for line in clean_report.split("\n"):
-
-            streamed_text += line + "\n"
-
-            report_placeholder.markdown(
-                streamed_text
-            )
-
-            time.sleep(0.02)
-
-        # ==========================================
-        # SAVE INTERACTION
+        # INTERACTION
         # ==========================================
 
         interaction = {
@@ -521,10 +471,7 @@ New User Request:
             ),
 
             "improvement_summary": (
-                result.get(
-                    "improvement_summary",
-                    ""
-                )
+                improvement_summary
             ),
 
             "final_report": clean_report
@@ -532,17 +479,15 @@ New User Request:
         }
 
         # ==========================================
-        # APPEND HISTORY
+        # SAVE MEMORY
         # ==========================================
 
         st.session_state.conversation_history.append(
-
             interaction
-
         )
 
         # ==========================================
-        # SAVE TO MONGODB
+        # SAVE DATABASE
         # ==========================================
 
         save_research(
@@ -561,13 +506,16 @@ New User Request:
 
             critique=result[
                 "critique"
-            ]
+            ],
+
+            conversation_history=(
+                st.session_state
+                .conversation_history
+            )
 
         )
 
-        st.success(
-            "Research saved successfully."
-        )
+        st.rerun()
 
     except Exception as e:
 
