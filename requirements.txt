@@ -1,0 +1,10 @@
+streamlit
+langgraph
+langchain
+langchain-groq
+tavily-python
+pymongo
+python-dotenv
+faiss-cpu
+sentence-transformers
+reportlab

@@ -1,0 +1,28 @@
+# Virtual Environment
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Environment Variables
+.env
+
+# Streamlit Secrets
+.streamlit/secrets.toml
+
+# Generated Files
+*.pdf
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/
+
+# FAISS
+*.faiss
+
+# Logs
+*.log
