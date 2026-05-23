@@ -9,11 +9,6 @@ from memory.mongo_store import (
     delete_research
 )
 
-from memory.faiss_store import (
-    store_memory,
-    retrieve_similar
-)
-
 from utils.pdf_generator import create_pdf
 
 # ==========================================
@@ -27,7 +22,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# MINIMAL CLEAN UI
+# CLEAN MINIMAL UI
 # ==========================================
 
 st.markdown(
@@ -36,7 +31,7 @@ st.markdown(
 
     .main {
         background-color: #0E1117;
-        color: #FFFFFF;
+        color: white;
     }
 
     section[data-testid="stSidebar"] {
@@ -70,15 +65,11 @@ st.markdown(
         padding: 0.5rem 1rem !important;
 
         font-weight: 500 !important;
-
-        transition: 0.2s ease;
     }
 
     .stButton button:hover {
 
         background-color: #273244 !important;
-
-        border: 1px solid #4B5563 !important;
     }
 
     .stDownloadButton button {
@@ -87,9 +78,9 @@ st.markdown(
 
         color: white !important;
 
-        border-radius: 8px !important;
-
         border: 1px solid #374151 !important;
+
+        border-radius: 8px !important;
     }
 
     hr {
@@ -107,25 +98,37 @@ st.markdown(
 
 st.title("Multi-Agent Research Assistant")
 
+st.caption(
+    "AI-powered autonomous research workflow using LangGraph, Groq, Tavily and MongoDB."
+)
+
 st.divider()
-
-# ==========================================
-# WORKFLOW
-# ==========================================
-
 
 # ==========================================
 # SESSION STATE
 # ==========================================
 
-if "active_chat" not in st.session_state:
-    st.session_state.active_chat = None
+default_states = {
 
-if "chat_query" not in st.session_state:
-    st.session_state.chat_query = ""
+    "active_chat": None,
 
-if "chat_report" not in st.session_state:
-    st.session_state.chat_report = ""
+    "chat_query": "",
+
+    "chat_report": "",
+
+    "chat_subquestions": [],
+
+    "chat_results": [],
+
+    "chat_critique": ""
+
+}
+
+for key, value in default_states.items():
+
+    if key not in st.session_state:
+
+        st.session_state[key] = value
 
 # ==========================================
 # SIDEBAR
@@ -133,17 +136,17 @@ if "chat_report" not in st.session_state:
 
 st.sidebar.title("Research History")
 
-# NEW CHAT BUTTON
+# NEW CHAT
 
 if st.sidebar.button("New Chat"):
 
-    st.session_state.active_chat = None
+    for key, value in default_states.items():
 
-    st.session_state.chat_query = ""
-
-    st.session_state.chat_report = ""
+        st.session_state[key] = value
 
     st.rerun()
+
+# LOAD HISTORY
 
 try:
 
@@ -152,8 +155,6 @@ try:
     for item in recent:
 
         query_title = item["query"]
-
-        report_text = item["report"]
 
         research_id = str(item["_id"])
 
@@ -168,9 +169,30 @@ try:
 
             st.session_state.active_chat = research_id
 
-            st.session_state.chat_query = query_title
+            st.session_state.chat_query = item.get(
+                "query",
+                ""
+            )
 
-            st.session_state.chat_report = report_text
+            st.session_state.chat_report = item.get(
+                "report",
+                ""
+            )
+
+            st.session_state.chat_subquestions = item.get(
+                "subquestions",
+                []
+            )
+
+            st.session_state.chat_results = item.get(
+                "search_results",
+                []
+            )
+
+            st.session_state.chat_critique = item.get(
+                "critique",
+                ""
+            )
 
             st.rerun()
 
@@ -183,17 +205,6 @@ try:
 
             delete_research(research_id)
 
-            if (
-                st.session_state.active_chat
-                == research_id
-            ):
-
-                st.session_state.active_chat = None
-
-                st.session_state.chat_query = ""
-
-                st.session_state.chat_report = ""
-
             st.rerun()
 
 except Exception as e:
@@ -203,7 +214,7 @@ except Exception as e:
     )
 
 # ==========================================
-# ACTIVE CHAT
+# DISPLAY SAVED CHAT
 # ==========================================
 
 if st.session_state.chat_query:
@@ -211,16 +222,66 @@ if st.session_state.chat_query:
     st.subheader("Current Session")
 
     st.markdown(
-        f"### {st.session_state.chat_query}"
+        f"## {st.session_state.chat_query}"
     )
 
+    # ==========================================
+    # RESEARCH PLAN
+    # ==========================================
+
+    if st.session_state.chat_subquestions:
+
+        st.subheader("Research Plan")
+
+        for idx, question in enumerate(
+            st.session_state.chat_subquestions
+        ):
+
+            st.markdown(
+                f"{idx + 1}. {question}"
+            )
+
+    # ==========================================
+    # RESEARCH FINDINGS
+    # ==========================================
+
+    if st.session_state.chat_results:
+
+        st.subheader("Research Findings")
+
+        for idx, result_text in enumerate(
+            st.session_state.chat_results
+        ):
+
+            with st.expander(
+                f"Research Result {idx + 1}"
+            ):
+
+                st.write(result_text)
+
+    # ==========================================
+    # CRITIC ANALYSIS
+    # ==========================================
+
+    if st.session_state.chat_critique:
+
+        st.subheader("Critic Analysis")
+
+        st.info(
+            st.session_state.chat_critique
+        )
+
+    # ==========================================
+    # FINAL REPORT
+    # ==========================================
+
     if st.session_state.chat_report:
+
+        st.subheader("Final Research Report")
 
         st.markdown(
             st.session_state.chat_report
         )
-
-        # PDF DOWNLOAD
 
         pdf_filename = "research_report.pdf"
 
@@ -249,7 +310,6 @@ if st.session_state.chat_query:
 
 query = st.text_area(
     "Enter your research query:",
-    value=st.session_state.chat_query,
     height=150,
     placeholder="Example: Summarize recent AI research on RAG systems"
 )
@@ -283,53 +343,31 @@ if run_button:
     try:
 
         # ==========================================
-        # MEMORY RETRIEVAL
-        # ==========================================
-
-        with timeline_container:
-
-            st.success(
-                "Memory Retrieval Completed"
-            )
-
-        similar_memories = retrieve_similar(query)
-
-        if similar_memories:
-
-            st.subheader(
-                "Similar Past Research"
-            )
-
-            for memory in similar_memories:
-
-                with st.expander(
-                    memory["query"]
-                ):
-
-                    st.write(
-                        memory["report"]
-                    )
-
-        # ==========================================
         # INITIAL STATE
         # ==========================================
 
         initial_state = {
+
             "query": query,
+
             "subquestions": [],
+
             "search_results": [],
+
             "critique": "",
+
             "final_report": ""
+
         }
 
         # ==========================================
-        # EXECUTE GRAPH
+        # EXECUTION STATUS
         # ==========================================
 
         with timeline_container:
 
             st.success(
-                "Planner Agent Completed"
+                "Planner Agent Running..."
             )
 
         result = app.invoke(initial_state)
@@ -340,13 +378,9 @@ if run_button:
                 "Researcher Agent Completed"
             )
 
-        with timeline_container:
-
             st.success(
                 "Critic Agent Completed"
             )
-
-        with timeline_container:
 
             st.success(
                 "Writer Agent Completed"
@@ -367,7 +401,7 @@ if run_button:
             )
 
         # ==========================================
-        # SEARCH RESULTS
+        # RESEARCH FINDINGS
         # ==========================================
 
         st.subheader("Research Findings")
@@ -383,6 +417,16 @@ if run_button:
                 st.write(result_text)
 
         # ==========================================
+        # CRITIC ANALYSIS
+        # ==========================================
+
+        st.subheader("Critic Analysis")
+
+        st.info(
+            result["critique"]
+        )
+
+        # ==========================================
         # FINAL REPORT
         # ==========================================
 
@@ -390,21 +434,15 @@ if run_button:
             "final_report"
         ]
 
-        # SAVE ACTIVE CHAT
-
-        st.session_state.chat_query = query
-
-        st.session_state.chat_report = final_report
-
-        st.subheader("Final Research Report")
+        st.subheader(
+            "Final Research Report"
+        )
 
         report_placeholder = st.empty()
 
         streamed_text = ""
 
-        words = final_report.split()
-
-        for word in words:
+        for word in final_report.split():
 
             streamed_text += word + " "
 
@@ -412,7 +450,27 @@ if run_button:
                 streamed_text
             )
 
-            time.sleep(0.02)
+            time.sleep(0.01)
+
+        # ==========================================
+        # SAVE SESSION STATE
+        # ==========================================
+
+        st.session_state.chat_query = query
+
+        st.session_state.chat_report = final_report
+
+        st.session_state.chat_subquestions = result[
+            "subquestions"
+        ]
+
+        st.session_state.chat_results = result[
+            "search_results"
+        ]
+
+        st.session_state.chat_critique = result[
+            "critique"
+        ]
 
         # ==========================================
         # PDF DOWNLOAD
@@ -438,22 +496,22 @@ if run_button:
             )
 
         # ==========================================
-        # SAVE MEMORY
+        # SAVE TO MONGODB
         # ==========================================
 
         save_research(
-            query,
-            final_report
+
+            query=query,
+
+            report=final_report,
+
+            subquestions=result["subquestions"],
+
+            search_results=result["search_results"],
+
+            critique=result["critique"]
+
         )
-
-        store_memory(
-            query,
-            final_report
-        )
-
-        st.rerun()
-
-        st.divider()
 
     except Exception as e:
 
