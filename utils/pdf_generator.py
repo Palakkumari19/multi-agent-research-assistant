@@ -1,16 +1,17 @@
-
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
     Spacer
 )
 
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import (
+    getSampleStyleSheet
+)
 
 from reportlab.lib.pagesizes import letter
 
 
-def create_pdf(report, filename):
+def create_pdf(content, filename):
 
     doc = SimpleDocTemplate(
         filename,
@@ -21,47 +22,21 @@ def create_pdf(report, filename):
 
     story = []
 
-    lines = report.split("\n")
+    paragraphs = content.split("\n")
 
-    for line in lines:
+    for para in paragraphs:
 
-        line = line.strip()
+        if para.strip():
 
-        if not line:
-            continue
+            p = Paragraph(
+                para,
+                styles["BodyText"]
+            )
 
-        # HEADINGS
+            story.append(p)
 
-        if line.startswith("# "):
-
-            style = styles["Heading1"]
-
-            text = line.replace("# ", "")
-
-        elif line.startswith("## "):
-
-            style = styles["Heading2"]
-
-            text = line.replace("## ", "")
-
-        elif line.startswith("### "):
-
-            style = styles["Heading3"]
-
-            text = line.replace("### ", "")
-
-        else:
-
-            style = styles["BodyText"]
-
-            text = line
-
-        story.append(
-            Paragraph(text, style)
-        )
-
-        story.append(
-            Spacer(1, 12)
-        )
+            story.append(
+                Spacer(1, 12)
+            )
 
     doc.build(story)

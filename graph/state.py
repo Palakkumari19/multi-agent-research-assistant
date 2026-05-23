@@ -12,7 +12,3 @@ class ResearchState(TypedDict):
     critique: str
 
     final_report: str
-
-    improvement_summary: str
-
-    conversation_history: List[dict]

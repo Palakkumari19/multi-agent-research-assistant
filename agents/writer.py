@@ -5,76 +5,43 @@ def writer_agent(state):
 
     query = state["query"]
 
-    findings = state["search_results"]
+    findings = "\n\n".join(
+        state["search_results"]
+    )
 
     critique = state["critique"]
 
-    previous_report = state.get(
-        "final_report",
-        ""
-    )
-
     prompt = f"""
-You are an expert research writer.
+You are an expert research report writer.
 
-Your task:
-1. Improve the research using critic feedback
-2. Generate a polished markdown report
-3. Clearly summarize what improvements were added
+Write a WELL-FORMATTED research report.
 
-IMPORTANT:
-- Use proper markdown
-- Use headings
-- Use bullet points
-- Keep spacing clean
-- NO raw markdown symbols like **
+IMPORTANT RULES:
+- Use proper markdown headings
+- Use short paragraphs
+- Use bullet points where useful
+- NO markdown symbols like **
+- NO code blocks
+- Make it clean and readable
+- Include examples
+- Include technical insights
+- Include future directions
+- Keep formatting professional
 
-FIRST generate:
-# Improvements Added
-
-THEN generate:
-# Final Research Report
-
-Research Query:
+Research Topic:
 {query}
-
-Previous Report:
-{previous_report}
 
 Research Findings:
 {findings}
 
 Critic Feedback:
 {critique}
+
+Generate a polished final report.
 """
 
     response = llm.invoke(prompt)
 
-    content = response.content
-
-    if "# Final Research Report" in content:
-
-        parts = content.split(
-            "# Final Research Report"
-        )
-
-        improvement_summary = parts[0]
-
-        final_report = (
-            "# Final Research Report\n"
-            + parts[1]
-        )
-
-    else:
-
-        improvement_summary = ""
-
-        final_report = content
-
-    state["improvement_summary"] = (
-        improvement_summary
-    )
-
-    state["final_report"] = final_report
-
-    return state
+    return {
+        "final_report": response.content
+    }

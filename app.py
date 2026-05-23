@@ -1,5 +1,4 @@
 import streamlit as st
-import time
 
 from graph.workflow import app
 
@@ -7,6 +6,11 @@ from memory.mongo_store import (
     save_research,
     get_recent_research,
     delete_research
+)
+
+from memory.faiss_store import (
+    store_memory,
+    retrieve_similar
 )
 
 from utils.pdf_generator import create_pdf
@@ -25,46 +29,49 @@ st.set_page_config(
 # STYLING
 # ==========================================
 
-st.markdown("""
-<style>
+st.markdown(
+    """
+    <style>
 
-.main {
-    background-color: #0E1117;
-    color: white;
-}
+    .main {
+        background-color: #0E1117;
+        color: white;
+    }
 
-section[data-testid="stSidebar"] {
-    background-color: #111827;
-}
+    section[data-testid="stSidebar"] {
+        background-color: #111827;
+    }
 
-.stTextArea textarea {
+    .stTextArea textarea {
 
-    background-color: #161B22 !important;
+        background-color: #161B22 !important;
 
-    color: white !important;
+        color: white !important;
 
-    border-radius: 10px !important;
+        border-radius: 10px !important;
 
-    border: 1px solid #2A2F3A !important;
-}
+        border: 1px solid #2A2F3A !important;
+    }
 
-.report-box {
+    .report-box {
 
-    background-color: #161B22;
+        background-color: #161B22;
 
-    padding: 25px;
+        padding: 25px;
 
-    border-radius: 12px;
+        border-radius: 12px;
 
-    border: 1px solid #1F2937;
+        border: 1px solid #1F2937;
 
-    margin-top: 20px;
+        margin-top: 20px;
 
-    margin-bottom: 20px;
-}
+        margin-bottom: 20px;
+    }
 
-</style>
-""", unsafe_allow_html=True)
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # ==========================================
 # TITLE
@@ -82,11 +89,23 @@ st.divider()
 # SESSION STATE
 # ==========================================
 
-if "conversation_history" not in st.session_state:
-    st.session_state.conversation_history = []
-
 if "active_chat" not in st.session_state:
     st.session_state.active_chat = None
+
+if "chat_query" not in st.session_state:
+    st.session_state.chat_query = ""
+
+if "chat_report" not in st.session_state:
+    st.session_state.chat_report = ""
+
+if "chat_subquestions" not in st.session_state:
+    st.session_state.chat_subquestions = []
+
+if "chat_findings" not in st.session_state:
+    st.session_state.chat_findings = []
+
+if "chat_critique" not in st.session_state:
+    st.session_state.chat_critique = ""
 
 # ==========================================
 # SIDEBAR
@@ -100,14 +119,22 @@ st.sidebar.title("Research History")
 
 if st.sidebar.button("New Chat"):
 
-    st.session_state.conversation_history = []
-
     st.session_state.active_chat = None
+
+    st.session_state.chat_query = ""
+
+    st.session_state.chat_report = ""
+
+    st.session_state.chat_subquestions = []
+
+    st.session_state.chat_findings = []
+
+    st.session_state.chat_critique = ""
 
     st.rerun()
 
 # ==========================================
-# HISTORY
+# LOAD HISTORY
 # ==========================================
 
 try:
@@ -122,7 +149,9 @@ try:
 
         col1, col2 = st.sidebar.columns([4,1])
 
+        # ==========================================
         # VIEW CHAT
+        # ==========================================
 
         if col1.button(
             query_title,
@@ -131,14 +160,30 @@ try:
 
             st.session_state.active_chat = research_id
 
-            st.session_state.conversation_history = item.get(
-                "conversation_history",
+            st.session_state.chat_query = item["query"]
+
+            st.session_state.chat_report = item["report"]
+
+            st.session_state.chat_subquestions = item.get(
+                "subquestions",
                 []
+            )
+
+            st.session_state.chat_findings = item.get(
+                "search_results",
+                []
+            )
+
+            st.session_state.chat_critique = item.get(
+                "critique",
+                ""
             )
 
             st.rerun()
 
+        # ==========================================
         # DELETE CHAT
+        # ==========================================
 
         if col2.button(
             "✕",
@@ -154,135 +199,99 @@ except Exception as e:
     st.sidebar.error(str(e))
 
 # ==========================================
-# DISPLAY CHAT HISTORY
+# DISPLAY ACTIVE CHAT
 # ==========================================
 
-if st.session_state.conversation_history:
+if st.session_state.chat_query:
 
-    st.subheader("Research Conversation")
+    st.subheader("Current Session")
 
-    for idx, interaction in enumerate(
+    st.markdown(
+        f"## {st.session_state.chat_query}"
+    )
 
-        st.session_state.conversation_history
+    # ==========================================
+    # SUBQUESTIONS
+    # ==========================================
 
-    ):
+    if st.session_state.chat_subquestions:
 
-        # ==========================================
-        # USER PROMPT
-        # ==========================================
-
-        st.markdown(
-            f"## User Request {idx + 1}"
+        st.subheader(
+            "Research Plan"
         )
 
-        st.info(
-            interaction["query"]
+        for q in st.session_state.chat_subquestions:
+
+            st.markdown(
+                f"- {q}"
+            )
+
+    # ==========================================
+    # FINDINGS
+    # ==========================================
+
+    if st.session_state.chat_findings:
+
+        st.subheader(
+            "Research Findings"
         )
 
-        # ==========================================
-        # IMPROVEMENTS
-        # ==========================================
+        for idx, finding in enumerate(
 
-        if interaction.get(
-            "improvement_summary"
+            st.session_state.chat_findings
+
         ):
 
-            st.subheader(
-                "Improvements Added"
-            )
-
-            st.success(
-                interaction[
-                    "improvement_summary"
-                ]
-            )
-
-        # ==========================================
-        # SUBQUESTIONS
-        # ==========================================
-
-        if interaction.get(
-            "subquestions"
-        ):
-
-            st.subheader(
-                "Research Plan"
-            )
-
-            for q in interaction[
-                "subquestions"
-            ]:
-
-                st.markdown(
-                    f"- {q}"
-                )
-
-        # ==========================================
-        # FINDINGS
-        # ==========================================
-
-        if interaction.get(
-            "search_results"
-        ):
-
-            st.subheader(
-                "Research Findings"
-            )
-
-            for i, result_text in enumerate(
-
-                interaction[
-                    "search_results"
-                ]
-
+            with st.expander(
+                f"Finding {idx + 1}"
             ):
 
-                with st.expander(
-                    f"Finding {i + 1}"
-                ):
+                st.markdown(finding)
 
-                    st.markdown(
-                        result_text
-                    )
+    # ==========================================
+    # CRITIC
+    # ==========================================
 
-        # ==========================================
-        # CRITIC
-        # ==========================================
+    if st.session_state.chat_critique:
 
-        if interaction.get(
-            "critique"
-        ):
+        st.subheader(
+            "Critic Analysis"
+        )
 
-            st.subheader(
-                "Critic Analysis"
-            )
+        st.warning(
+            st.session_state.chat_critique
+        )
 
-            st.warning(
-                interaction["critique"]
-            )
+    # ==========================================
+    # FINAL REPORT
+    # ==========================================
 
-        # ==========================================
-        # FINAL REPORT
-        # ==========================================
+    if st.session_state.chat_report:
 
         st.subheader(
             "Final Research Report"
         )
 
-        st.markdown(
-            interaction["final_report"]
+        clean_report = (
+
+            st.session_state.chat_report
+
+            .replace("**", "")
+
+            .replace("```", "")
+
         )
+
+        st.markdown(clean_report)
 
         # ==========================================
         # PDF
         # ==========================================
 
-        pdf_filename = (
-            f"report_{idx}.pdf"
-        )
+        pdf_filename = "research_report.pdf"
 
         create_pdf(
-            interaction["final_report"],
+            clean_report,
             pdf_filename
         )
 
@@ -293,10 +302,7 @@ if st.session_state.conversation_history:
 
             st.download_button(
 
-                label=(
-                    f"Download PDF "
-                    f"{idx + 1}"
-                ),
+                label="Download PDF Report",
 
                 data=pdf_file,
 
@@ -306,15 +312,19 @@ if st.session_state.conversation_history:
 
             )
 
-        st.divider()
+    st.divider()
 
 # ==========================================
-# INPUT
+# USER INPUT
 # ==========================================
 
 query = st.text_area(
     "Enter your research query:",
-    height=150
+    height=150,
+    placeholder=(
+        "Example: Summarize recent AI "
+        "research on RAG systems"
+    )
 )
 
 run_button = st.button(
@@ -337,86 +347,41 @@ if run_button:
 
     try:
 
-        previous_context = ""
-
-        improvement_summary = ""
-
-        # ==========================================
-        # CONTEXT MEMORY
-        # ==========================================
-
-        if st.session_state.conversation_history:
-
-            last_chat = (
-
-                st.session_state
-                .conversation_history[-1]
-
-            )
-
-            previous_context = f"""
-
-PREVIOUS REPORT:
-
-{last_chat["final_report"]}
-
-PREVIOUS CRITIC ANALYSIS:
-
-{last_chat["critique"]}
-"""
-
-            improvement_summary = """
-This response improves the previous report by:
-- addressing critic feedback
-- refining missing concepts
-- increasing completeness
-- improving structure
-"""
-
-        # ==========================================
-        # PROMPT
-        # ==========================================
-
-        full_query = f"""
-You are an advanced autonomous research assistant.
-
-Generate:
-
-1. Research subquestions
-2. Research findings
-3. Critic analysis
-4. Final structured report
-
-IMPORTANT:
-- Use markdown formatting
-- Use headings
-- Use bullet points
-- Keep spacing clean
-- Avoid giant paragraphs
-- Avoid raw markdown symbols like **
-
-CONTEXT:
-
-{previous_context}
-
-USER REQUEST:
-
-{query}
-"""
-
-        # ==========================================
-        # STATUS
-        # ==========================================
-
         status = st.empty()
 
+        # ==========================================
+        # MEMORY RETRIEVAL
+        # ==========================================
+
         status.info(
-            "Planner Agent Running..."
+            "Checking memory..."
         )
+
+        similar_memories = retrieve_similar(query)
+
+        if similar_memories:
+
+            st.subheader(
+                "Similar Past Research"
+            )
+
+            for memory in similar_memories:
+
+                with st.expander(
+                    memory["query"]
+                ):
+
+                    st.markdown(
+                        memory["report"]
+                    )
+
+        # ==========================================
+        # INITIAL STATE
+        # ==========================================
 
         initial_state = {
 
-            "query": full_query,
+            "query": query,
 
             "subquestions": [],
 
@@ -427,6 +392,14 @@ USER REQUEST:
             "final_report": ""
 
         }
+
+        # ==========================================
+        # EXECUTION
+        # ==========================================
+
+        status.info(
+            "Planner Agent Running..."
+        )
 
         result = app.invoke(
             initial_state
@@ -451,40 +424,24 @@ USER REQUEST:
         )
 
         # ==========================================
-        # INTERACTION
+        # SAVE SESSION
         # ==========================================
 
-        interaction = {
+        st.session_state.chat_query = query
 
-            "query": query,
+        st.session_state.chat_report = clean_report
 
-            "subquestions": (
-                result["subquestions"]
-            ),
+        st.session_state.chat_subquestions = result[
+            "subquestions"
+        ]
 
-            "search_results": (
-                result["search_results"]
-            ),
+        st.session_state.chat_findings = result[
+            "search_results"
+        ]
 
-            "critique": (
-                result["critique"]
-            ),
-
-            "improvement_summary": (
-                improvement_summary
-            ),
-
-            "final_report": clean_report
-
-        }
-
-        # ==========================================
-        # SAVE MEMORY
-        # ==========================================
-
-        st.session_state.conversation_history.append(
-            interaction
-        )
+        st.session_state.chat_critique = result[
+            "critique"
+        ]
 
         # ==========================================
         # SAVE DATABASE
@@ -506,13 +463,17 @@ USER REQUEST:
 
             critique=result[
                 "critique"
-            ],
+            ]
 
-            conversation_history=(
-                st.session_state
-                .conversation_history
-            )
+        )
 
+        # ==========================================
+        # SAVE VECTOR MEMORY
+        # ==========================================
+
+        store_memory(
+            query,
+            clean_report
         )
 
         st.rerun()

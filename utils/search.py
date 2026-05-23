@@ -14,21 +14,24 @@ def search_web(query: str):
     response = tavily.search(
         query=query,
         search_depth="advanced",
-        max_results=5
+        max_results=3
     )
 
     results = []
 
     for result in response["results"]:
 
-        results.append(
-            f"""
-Title: {result['title']}
+        formatted = f"""
+Title:
+{result['title']}
 
-Content: {result['content']}
+Content:
+{result['content']}
 
-URL: {result['url']}
+URL:
+{result['url']}
 """
-        )
+
+        results.append(formatted)
 
     return results

@@ -1,5 +1,6 @@
 from pymongo import MongoClient
 from datetime import datetime
+from bson import ObjectId
 
 from utils.config import get_secret
 
@@ -15,17 +16,23 @@ collection = db["research_history"]
 def save_research(
     query,
     report,
-    subquestions,
-    search_results,
-    critique
+    subquestions=[],
+    search_results=[],
+    critique=""
 ):
 
     document = {
+
         "query": query,
+
         "report": report,
+
         "subquestions": subquestions,
+
         "search_results": search_results,
+
         "critique": critique,
+
         "timestamp": datetime.utcnow()
     }
 
@@ -43,8 +50,6 @@ def get_recent_research(limit=20):
 
 
 def delete_research(research_id):
-
-    from bson import ObjectId
 
     collection.delete_one({
         "_id": ObjectId(research_id)

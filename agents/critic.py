@@ -3,36 +3,30 @@ from utils.llm import llm
 
 def critic_agent(state):
 
-    findings = state["search_results"]
+    report = state["search_results"]
 
-    previous_report = state.get(
-        "final_report",
-        ""
-    )
+    combined = "\n\n".join(report)
 
     prompt = f"""
 You are a strict research critic.
 
-Analyze the research quality.
+Review the following research findings.
 
 Identify:
-- Missing information
-- Weak explanations
-- Missing technical depth
-- Missing examples
-- Missing future directions
+- missing areas
+- weak arguments
+- lack of technical depth
+- missing examples
+- poor structure
 
-Also suggest EXACT improvements.
+Give concise feedback in bullet points.
 
-Previous Report:
-{previous_report}
-
-Research Findings:
-{findings}
+Research:
+{combined}
 """
 
     response = llm.invoke(prompt)
 
-    state["critique"] = response.content
-
-    return state
+    return {
+        "critique": response.content
+    }

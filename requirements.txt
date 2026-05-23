@@ -1,10 +1,10 @@
 streamlit
-langgraph
 langchain
+langgraph
 langchain-groq
 tavily-python
 pymongo
-python-dotenv
 faiss-cpu
 sentence-transformers
 reportlab
+python-dotenv
