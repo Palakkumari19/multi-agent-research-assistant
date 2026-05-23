@@ -5,7 +5,7 @@ def critic_agent(state):
 
     report = state["search_results"]
 
-    combined = "\n\n".join(report)
+    combined = "\n\n".join(report)[:2500]
 
     prompt = f"""
 You are a strict research critic.

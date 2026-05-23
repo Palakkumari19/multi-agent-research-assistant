@@ -7,7 +7,7 @@ def writer_agent(state):
 
     findings = "\n\n".join(
         state["search_results"]
-    )
+    )[:3000]
 
     critique = state["critique"]
 
@@ -24,8 +24,6 @@ IMPORTANT RULES:
 - NO code blocks
 - Make it clean and readable
 - Include examples
-- Include technical insights
-- Include future directions
 - Keep formatting professional
 
 Research Topic:

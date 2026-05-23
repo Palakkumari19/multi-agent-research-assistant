@@ -14,7 +14,7 @@ def search_web(query: str):
     response = tavily.search(
         query=query,
         search_depth="advanced",
-        max_results=3
+        max_results=2
     )
 
     results = []

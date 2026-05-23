@@ -11,7 +11,7 @@ def researcher_agent(state):
 
         results = search_web(question)
 
-        combined = "\n\n".join(results)
+        combined = "\n\n".join(results[:1])
 
         formatted = f"""
 ### Research Question
