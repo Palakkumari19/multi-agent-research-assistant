@@ -447,7 +447,8 @@ if run_button:
             streamed_text += word + " "
 
             report_placeholder.markdown(
-                streamed_text
+                streamed_text,
+                unsafe_allow_html=True
             )
 
             time.sleep(0.01)

@@ -1,40 +1,49 @@
 from utils.llm import llm
 
-
 def writer_agent(state):
 
     query = state["query"]
 
-    research = "\n".join(
-        state["search_results"]
-    )
+    search_results = state["search_results"]
 
     critique = state["critique"]
 
     prompt = f"""
-    Write a detailed research report.
+You are a professional AI research report writer.
 
-    Original Query:
-    {query}
+Write a WELL-FORMATTED markdown research report.
 
-    Research Findings:
-    {research}
+IMPORTANT FORMATTING RULES:
 
-    Critic Feedback:
-    {critique}
+- Use proper markdown headings:
+# Title
+## Introduction
+## Key Findings
+## Challenges
+## Future Directions
+## Conclusion
+## Recommendations
 
-    Improve the report using the critique.
+- Use bullet points where needed.
+- Use short readable paragraphs.
+- Add spacing between sections.
+- Do NOT write everything in one paragraph.
+- Make the report visually clean and professional.
 
-    Structure:
-    - Introduction
-    - Key Findings
-    - Challenges
-    - Future Directions
-    - Conclusion
-    """
+Research Query:
+{query}
+
+Research Findings:
+{search_results}
+
+Critique:
+{critique}
+
+Generate the final report now.
+"""
 
     response = llm.invoke(prompt)
 
-    return {
-        "final_report": response.content
-    }
+    state["final_report"] = response.content
+
+    return state
